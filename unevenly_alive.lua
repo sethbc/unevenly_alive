@@ -352,6 +352,7 @@ local function organism_breathe()
     ui.fever   = clamp(ui.fever + (s.spread*0.002) - (s.trust*0.003), 0, 1)
     redraw()
     arc_redraw()
+    grid_redraw()
   end
 end
 
@@ -608,10 +609,22 @@ function init()
     print("Crow disconnected")
   end
 
+  -- Grid setup (optional device)
+  if grid_device then
+    grid_connected = true
+    grid_size.x = grid_device.cols
+    grid_size.y = grid_device.rows
+    grid_device.key = grid_key
+    print("Grid connected: " .. grid_size.x .. "x" .. grid_size.y)
+  else
+    print("Grid not found (optional)")
+  end
+
   clock.run(organism_breathe)
   s.started = true
   redraw()
   arc_redraw()
+  grid_redraw()
 end
 
 function enc(n,d)
