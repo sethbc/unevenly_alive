@@ -12,12 +12,24 @@
 
 ## Controls (feel, not parameters)
 
+### Norns Encoders & Keys
+
 * `E1` — **Age / Dissolve** (pushes it to smear & forget; increases memory corrosion)
 * `E2` — **Trust / Anchor** (briefly narrows to the current center; adds consonant bias)
 * `E3` — **Risk** (widens harmonic spread and emotional volatility)
 * `K1` (hold) + `E1` — **Time drag** (nudges its internal time—may obey or resist)
 * `K2` — **Offer tone** (captures your live input into its memory)
 * `K3` — **Invite response** (encourages a harmonic apparition to emerge now)
+
+### Monome Arc (optional)
+
+If you have a **monome Arc** connected, it provides visual feedback and tactile control:
+
+* **Ring 1** — Age / Dissolve (breathing glow intensifies with memory smear)
+* **Ring 2** — Trust / Anchor (stable, centered light)
+* **Ring 3** — Risk (feverish, jittery glow responds to emotional volatility)
+
+The Arc is **completely optional** — the script works perfectly without it, but adds a beautiful tactile/visual layer if present.
 
 > Plug an instrument/mic into input 1. Keep levels tasteful; this wants headroom.
 
