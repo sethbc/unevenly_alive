@@ -1,6 +1,6 @@
 -- unevenly_alive.lua
 -- a feverish but beautiful time-animal
--- by you + chatgpt
+-- by you + chatgpt + claude
 
 engine.name = "PolySub" -- lush & stable enough to stay beautiful
 
