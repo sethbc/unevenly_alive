@@ -154,6 +154,10 @@ local function soften_memory()
 end
 
 -- ---------- GRID VISUALIZATION ----------
+-- Forward declarations
+local grid_redraw_128
+local grid_redraw_256
+
 local function grid_redraw()
   if not grid_connected then return end
 
@@ -170,7 +174,7 @@ local function grid_redraw()
   grid_device:refresh()
 end
 
-local function grid_redraw_128()
+function grid_redraw_128()
   -- Row 1-2: Scale degree selector (12 semitones)
   for i=1,12 do
     local has_degree = false
@@ -220,7 +224,7 @@ local function grid_redraw_128()
   end
 end
 
-local function grid_redraw_256()
+function grid_redraw_256()
   -- Enhanced 256 layout
   -- Rows 1-2: Scale degree selector (all 12 semitones, larger)
   for i=1,12 do
