@@ -372,6 +372,168 @@ local function invite_response()
   end
 end
 
+-- ---------- GRID INPUT ----------
+function grid_key(x, y, z)
+  if not grid_connected then return end
+
+  if grid_size.x == 16 and grid_size.y == 16 then
+    grid_key_256(x, y, z)
+  else
+    grid_key_128(x, y, z)
+  end
+
+  grid_redraw()
+end
+
+function grid_key_128(x, y, z)
+  -- Row 1: Scale degree selector (toggle degrees in custom scale)
+  if y == 1 and x <= 12 then
+    if z == 1 then
+      local degree = x - 1
+      local found = false
+      for i, deg in ipairs(s.custom_scale_degrees) do
+        if deg == degree then
+          table.remove(s.custom_scale_degrees, i)
+          found = true
+          break
+        end
+      end
+      if not found then
+        table.insert(s.custom_scale_degrees, degree)
+        table.sort(s.custom_scale_degrees)
+      end
+      if s.use_custom_scale then
+        s.scale = s.custom_scale_degrees
+      end
+    end
+  -- Row 2: Toggle custom scale mode
+  elseif y == 2 and x == 14 and z == 1 then
+    s.use_custom_scale = not s.use_custom_scale
+    if s.use_custom_scale and #s.custom_scale_degrees > 0 then
+      s.scale = s.custom_scale_degrees
+    else
+      build_scale()
+    end
+  -- Row 3: Mode selection
+  elseif y == 3 and x <= 7 and z == 1 then
+    s.mode = grid_modes[x]
+    build_scale()
+  -- Row 4: Manual note triggering
+  elseif y == 4 and x <= 16 then
+    local note = s.base_midi - 12 + (x - 1)
+    if z == 1 then
+      grid_note_held[note] = true
+      polysub_voice(x, note, rnd(0.5, 2.0), s.amp, s.pan)
+    else
+      grid_note_held[note] = false
+    end
+  -- Row 6: Age slider
+  elseif y == 6 then
+    if z == 1 then
+      s.memory_age = (x - 1) / (grid_size.x - 1)
+      soften_memory()
+    end
+  -- Row 7: Trust slider
+  elseif y == 7 then
+    if z == 1 then
+      s.trust = (x - 1) / (grid_size.x - 1)
+    end
+  -- Row 8: Risk slider
+  elseif y == 8 then
+    if z == 1 then
+      s.spread = 1 + ((x - 1) / (grid_size.x - 1)) * 7
+      build_scale()
+    end
+  end
+end
+
+function grid_key_256(x, y, z)
+  -- Rows 1-2: Scale degree selector
+  if (y == 1 or y == 2) and x <= 12 then
+    if z == 1 then
+      local degree = x - 1
+      local found = false
+      for i, deg in ipairs(s.custom_scale_degrees) do
+        if deg == degree then
+          table.remove(s.custom_scale_degrees, i)
+          found = true
+          break
+        end
+      end
+      if not found then
+        table.insert(s.custom_scale_degrees, degree)
+        table.sort(s.custom_scale_degrees)
+      end
+      if s.use_custom_scale then
+        s.scale = s.custom_scale_degrees
+      end
+    end
+  -- Row 3: Controls
+  elseif y == 3 and x == 14 and z == 1 then
+    s.use_custom_scale = not s.use_custom_scale
+    if s.use_custom_scale and #s.custom_scale_degrees > 0 then
+      s.scale = s.custom_scale_degrees
+    else
+      build_scale()
+    end
+  elseif y == 3 and x == 16 and z == 1 then
+    s.custom_scale_degrees = {}
+  -- Row 4: Mode selection
+  elseif y == 4 and z == 1 then
+    local mode_idx = math.ceil(x / 2)
+    if mode_idx <= 7 then
+      s.mode = grid_modes[mode_idx]
+      build_scale()
+    end
+  -- Rows 6-9: Manual note triggering (4 octave range)
+  elseif y >= 6 and y <= 9 then
+    local row_offset = (y - 6) * 16
+    local note = s.base_midi - 24 + row_offset + (x - 1)
+    if z == 1 then
+      grid_note_held[note] = true
+      polysub_voice(x + row_offset, note, rnd(0.5, 2.0), s.amp, s.pan)
+    else
+      grid_note_held[note] = false
+    end
+  -- Row 11: Age slider
+  elseif y == 11 then
+    if z == 1 then
+      s.memory_age = (x - 1) / 15
+      soften_memory()
+    end
+  -- Row 12: Trust slider
+  elseif y == 12 then
+    if z == 1 then
+      s.trust = (x - 1) / 15
+    end
+  -- Row 13: Risk slider
+  elseif y == 13 then
+    if z == 1 then
+      s.spread = 1 + ((x - 1) / 15) * 7
+      build_scale()
+    end
+  -- Row 15: Organism interaction
+  elseif y == 15 then
+    if x <= 8 then
+      -- Provoke zone (left half)
+      grid_provoke_held = (z == 1)
+      if z == 1 then
+        -- Trigger immediate response
+        invite_response()
+        -- Increase volatility slightly
+        s.spread = clamp(s.spread + 0.5, 1, 8)
+      end
+    else
+      -- Calm zone (right half)
+      if z == 1 then
+        -- Increase trust/stability
+        s.trust = clamp(s.trust + 0.1, 0, 1)
+        s.spread = clamp(s.spread - 0.3, 1, 8)
+      end
+    end
+  end
+end
+
 -- ---------- ARC INPUT ----------
 function arc_delta(n, d)
   if n == 1 then
