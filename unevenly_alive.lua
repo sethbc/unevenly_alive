@@ -153,6 +153,140 @@ local function soften_memory()
   end
 end
 
+-- ---------- GRID VISUALIZATION ----------
+local function grid_redraw()
+  if not grid_connected then return end
+
+  grid_device:all(0)
+
+  if grid_size.x == 16 and grid_size.y == 16 then
+    -- 256 grid layout
+    grid_redraw_256()
+  elseif grid_size.x >= 8 and grid_size.y >= 8 then
+    -- 128 grid layout (or larger like 64/varibright)
+    grid_redraw_128()
+  end
+
+  grid_device:refresh()
+end
+
+local function grid_redraw_128()
+  -- Row 1-2: Scale degree selector (12 semitones)
+  for i=1,12 do
+    local has_degree = false
+    if s.use_custom_scale then
+      for _,deg in ipairs(s.custom_scale_degrees) do
+        if deg == (i-1) then has_degree = true; break end
+      end
+    end
+    local brightness = has_degree and 15 or 4
+    grid_device:led(i, 1, brightness)
+  end
+
+  -- Row 2: Toggle custom scale mode
+  grid_device:led(14, 2, s.use_custom_scale and 15 or 4)
+
+  -- Row 3: Mode selection (7 modes)
+  for i=1,math.min(7, grid_size.x) do
+    local is_current = (s.mode == grid_modes[i])
+    grid_device:led(i, 3, is_current and 15 or 4)
+  end
+
+  -- Row 4-5: Manual note triggering (2 octaves chromatic)
+  for i=1,math.min(16, grid_size.x) do
+    local note = s.base_midi - 12 + (i-1)
+    local is_held = grid_note_held[note] or false
+    grid_device:led(i, 4, is_held and 15 or 2)
+  end
+
+  -- Row 6: Parameter sliders
+  local age_x = math.floor(s.memory_age * (grid_size.x - 1)) + 1
+  local trust_x = math.floor(s.trust * (grid_size.x - 1)) + 1
+  local risk_x = math.floor((s.spread / 8) * (grid_size.x - 1)) + 1
+
+  for x=1,grid_size.x do
+    grid_device:led(x, 6, x <= age_x and 8 or 2)
+  end
+
+  -- Row 7: Trust slider
+  for x=1,grid_size.x do
+    grid_device:led(x, 7, x <= trust_x and 12 or 2)
+  end
+
+  -- Row 8: Risk slider with fever visualization
+  for x=1,grid_size.x do
+    local brightness = x <= risk_x and (10 + math.floor(ui.fever * 5)) or 2
+    grid_device:led(x, 8, brightness)
+  end
+end
+
+local function grid_redraw_256()
+  -- Enhanced 256 layout
+  -- Rows 1-2: Scale degree selector (all 12 semitones, larger)
+  for i=1,12 do
+    local has_degree = false
+    if s.use_custom_scale then
+      for _,deg in ipairs(s.custom_scale_degrees) do
+        if deg == (i-1) then has_degree = true; break end
+      end
+    end
+    local brightness = has_degree and 15 or 4
+    grid_device:led(i, 1, brightness)
+    grid_device:led(i, 2, brightness) -- double height
+  end
+
+  -- Row 3: Controls
+  grid_device:led(14, 3, s.use_custom_scale and 15 or 4) -- toggle custom scale
+  grid_device:led(16, 3, 8) -- clear custom scale
+
+  -- Rows 4-5: Mode selection
+  for i=1,7 do
+    local is_current = (s.mode == grid_modes[i])
+    grid_device:led(i*2-1, 4, is_current and 15 or 4)
+  end
+
+  -- Rows 6-9: Manual note triggering (4 rows = wider range)
+  for row=0,3 do
+    for col=1,16 do
+      local note = s.base_midi - 24 + (row * 16) + (col - 1)
+      local is_held = grid_note_held[note] or false
+      grid_device:led(col, 6 + row, is_held and 15 or 2)
+    end
+  end
+
+  -- Row 11-13: Parameter sliders (more vertical space)
+  local age_x = math.floor(s.memory_age * 15) + 1
+  local trust_x = math.floor(s.trust * 15) + 1
+  local risk_x = math.floor((s.spread / 8) * 15) + 1
+
+  -- Age slider
+  for x=1,16 do
+    grid_device:led(x, 11, x <= age_x and 6 or 1)
+  end
+
+  -- Trust slider
+  for x=1,16 do
+    grid_device:led(x, 12, x <= trust_x and 10 or 1)
+  end
+
+  -- Risk slider
+  for x=1,16 do
+    local brightness = x <= risk_x and (8 + math.floor(ui.fever * 6)) or 1
+    grid_device:led(x, 13, brightness)
+  end
+
+  -- Row 15-16: Organism interaction zone
+  -- Hold to provoke/calm the organism
+  local provoke_brightness = grid_provoke_held and 12 or 3
+  for x=1,8 do
+    grid_device:led(x, 15, provoke_brightness)
+  end
+  local calm_brightness = grid_provoke_held and 3 or 8
+  for x=9,16 do
+    grid_device:led(x, 15, calm_brightness)
+  end
+end
+
 -- ---------- ARC VISUALIZATION ----------
 local function arc_redraw()
   if not arc_connected then return end
