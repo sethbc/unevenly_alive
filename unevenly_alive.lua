@@ -26,7 +26,7 @@ local s = {
   del = 0.22,
 }
 
-local ui = { blink = 0, breathe = 0, fever = 0 }
+local ui = { blink = 0, breathe = 0, fever = 0, k1_held = false }
 
 -- ---------- UTIL ----------
 local function lerp(a,b,t) return a + (b-a) * t end
@@ -214,9 +214,21 @@ function init()
 end
 
 function enc(n,d)
-  if n==1 then -- Age / Dissolve
-    s.memory_age = clamp(s.memory_age + d*0.01, 0, 1)
-    soften_memory()
+  if n==1 then
+    if ui.k1_held then
+      -- K1 held + E1 = Time drag (may obey or resist)
+      if math.random() < s.obeys_time_drag then
+        s.heart = clamp(s.heart + d*0.005, 0.07, 0.25)
+      else
+        -- rebellion: quick fever spike that still sounds nice
+        s.spread = clamp(s.spread + d*0.01, 1, 8)
+        build_scale()
+      end
+    else
+      -- E1 alone = Age / Dissolve
+      s.memory_age = clamp(s.memory_age + d*0.01, 0, 1)
+      soften_memory()
+    end
   elseif n==2 then -- Trust / Anchor
     s.trust = clamp(s.trust + d*0.01, 0, 1)
   elseif n==3 then -- Risk
@@ -227,17 +239,14 @@ function enc(n,d)
 end
 
 function key(n,z)
-  if n==1 and z==1 then
-    -- K1 hold handled as modifier in enc(1) spirit; we simulate "time drag"
-    if math.random() < s.obeys_time_drag then
-      s.heart = clamp(s.heart + rnd(-0.03,0.03), 0.07, 0.25)
-    else
-      -- rebellion: quick fever spike that still sounds nice
-      s.spread = clamp(s.spread + rnd(0.1,0.5), 1, 8)
-    end
+  if n==1 then
+    -- K1 acts as a hold modifier for E1 (time drag)
+    ui.k1_held = (z==1)
   elseif n==2 and z==1 then
+    -- K2 = Offer tone (capture input)
     capture_offer()
   elseif n==3 and z==1 then
+    -- K3 = Invite response (trigger apparition)
     invite_response()
   end
   redraw()
