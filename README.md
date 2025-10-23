@@ -25,8 +25,12 @@
 
 ## Installation
 
-1. On Norns: `;install https://gist.github.com` won’t work out of the box—so just create a new script via maiden (or scp) named `unevenly_alive.lua` under `dust/code/unevenly_alive/` and paste the code below.
-2. No custom SuperCollider engine needed — uses **Engine_PolySub** + **softcut** + `musicutil`.
+From maiden:
+```
+;install https://github.com/sethbc/unevenly_alive
+```
+
+Or manually copy the `unevenly_alive` folder to `~/dust/code/`.
 
 ## How to “play” it (without playing it)
 
