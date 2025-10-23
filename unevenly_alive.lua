@@ -6,6 +6,7 @@ engine.name = "PolySub" -- lush & stable enough to stay beautiful
 
 local musicutil = require "musicutil"
 local softcut = softcut
+local arc_device = arc.connect()
 
 -- ---------- STATE ----------
 local s = {
@@ -27,6 +28,7 @@ local s = {
 }
 
 local ui = { blink = 0, breathe = 0, fever = 0, k1_held = false }
+local arc_connected = false
 
 -- ---------- UTIL ----------
 local function lerp(a,b,t) return a + (b-a) * t end
@@ -130,6 +132,37 @@ local function soften_memory()
   end
 end
 
+-- ---------- ARC VISUALIZATION ----------
+local function arc_redraw()
+  if not arc_connected then return end
+
+  arc_device:all(0)
+
+  -- Ring 1: Age/Dissolve (E1) - smeared, breathing glow
+  local age_pos = math.floor(s.memory_age * 64)
+  for i=1,age_pos do
+    local brightness = 4 + math.floor(ui.breathe * 8)
+    arc_device:led(1, i, brightness)
+  end
+
+  -- Ring 2: Trust/Anchor (E2) - stable, centered
+  local trust_pos = math.floor(s.trust * 64)
+  for i=1,trust_pos do
+    local brightness = 8 + math.floor(s.trust * 7)
+    arc_device:led(2, i, brightness)
+  end
+
+  -- Ring 3: Risk (E3) - feverish, jittery
+  local risk_pos = math.floor((s.spread / 8) * 64)
+  for i=1,risk_pos do
+    local jitter = ui.fever > 0.5 and math.random(0,3) or 0
+    local brightness = 6 + math.floor(ui.fever * 6) + jitter
+    arc_device:led(3, i, clamp(brightness, 0, 15))
+  end
+
+  arc_device:refresh()
+end
+
 -- ---------- ORGANISM ----------
 local function organism_breathe()
   while true do
@@ -163,6 +196,7 @@ local function organism_breathe()
     ui.breathe = 0.8*ui.breathe + 0.2*rnd(0.2,1.0)
     ui.fever   = clamp(ui.fever + (s.spread*0.002) - (s.trust*0.003), 0, 1)
     redraw()
+    arc_redraw()
   end
 end
 
@@ -181,6 +215,24 @@ local function invite_response()
   if math.random() < 0.4 then
     polysub_voice(4, n-5, rnd(0.5, 1.6), s.amp*0.6, s.pan*0.6)
   end
+end
+
+-- ---------- ARC INPUT ----------
+function arc_delta(n, d)
+  if n == 1 then
+    -- Arc ring 1 = Age / Dissolve (same as E1)
+    s.memory_age = clamp(s.memory_age + d*0.005, 0, 1)
+    soften_memory()
+  elseif n == 2 then
+    -- Arc ring 2 = Trust / Anchor (same as E2)
+    s.trust = clamp(s.trust + d*0.005, 0, 1)
+  elseif n == 3 then
+    -- Arc ring 3 = Risk (same as E3)
+    s.spread = clamp(s.spread + d*0.01, 1, 8)
+    build_scale()
+  end
+  redraw()
+  arc_redraw()
 end
 
 -- ---------- NORNS LIFECYCLE ----------
@@ -208,9 +260,19 @@ function init()
   build_scale()
   softcut_setup()
 
+  -- Arc setup (optional device)
+  if arc_device then
+    arc_connected = true
+    arc_device.delta = arc_delta
+    print("Arc connected")
+  else
+    print("Arc not found (optional)")
+  end
+
   clock.run(organism_breathe)
   s.started = true
   redraw()
+  arc_redraw()
 end
 
 function enc(n,d)
