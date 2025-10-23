@@ -1,0 +1,256 @@
+-- unevenly_alive.lua
+-- a feverish but beautiful time-animal
+-- by you + chatgpt
+
+engine.name = "PolySub" -- lush & stable enough to stay beautiful
+
+local musicutil = require "musicutil"
+local softcut = softcut
+
+-- ---------- STATE ----------
+local s = {
+  started = false,
+  base_midi = 60,      -- learned center
+  mode = "ionian",     -- starting mood; will morph
+  scale = {},          -- active scale degrees (diatonic + color tones)
+  spread = 5,          -- harmonic risk (E3)
+  trust = 0.4,         -- harmonic center bias (E2)
+  memory_age = 0.3,    -- smear/forget (E1)
+  micro = 0.04,        -- microtonal drift in semitones
+  heart = 0.11,        -- internal pulse (in beats) for organism updates
+  obeys_time_drag = 0.6,
+  last_offer_t = 0,
+  amp = 0.3,
+  pan = 0,
+  rev = 0.28,
+  del = 0.22,
+}
+
+local ui = { blink = 0, breathe = 0, fever = 0 }
+
+-- ---------- UTIL ----------
+local function lerp(a,b,t) return a + (b-a) * t end
+local function clamp(x,a,b) return math.max(a, math.min(b, x)) end
+local function rnd(a,b) return a + (b-a) * math.random() end
+local function sign(x) return x < 0 and -1 or 1 end
+
+local function build_scale()
+  local degrees = musicutil.SCALES[musicutil.SCALE_NAMES_MAP[s.mode]].intervals
+  local pool = {}
+  for i=1,#degrees do table.insert(pool, degrees[i]) end
+  -- add beautiful color tones depending on risk
+  if s.spread > 3 then table.insert(pool, 14) end -- 9th
+  if s.spread > 4 then table.insert(pool, 17) end -- 11th
+  if s.spread > 5 then table.insert(pool, 9)  end -- 6th
+  s.scale = pool
+end
+
+local function choose_note()
+  -- center vs risk: biased roulette
+  local bias = clamp(1.2 - s.trust, 0.1, 1.0)
+  local deg = s.scale[math.random(#s.scale)]
+  local octave = math.floor(rnd(-1, 2))
+  local n = s.base_midi + deg + (12 * octave)
+
+  -- pull toward center by trust
+  n = lerp(n, s.base_midi, s.trust * 0.6)
+
+  -- micro drift: always small, keeps it pretty
+  n = n + rnd(-s.micro, s.micro)
+
+  -- limit spread gracefully
+  n = clamp(n, s.base_midi - (7 + s.spread), s.base_midi + (9 + s.spread))
+  return n
+end
+
+local function polysub_voice(id, midi, dur, amp, pan)
+  -- map to PolySub
+  local hz = musicutil.note_num_to_freq(midi)
+  engine.hz(id, hz)
+  engine.amp(id, amp)
+  engine.pan(id, pan)
+  engine.lp(id, 2200 + (s.spread*300))
+  engine.hp(id, 10)
+  engine.release(id, clamp(dur*1.15, 0.2, 6))
+  engine.fm_index(id, 0.05 + s.spread*0.03) -- a whisper of tension
+  engine.cut(id, 0.55 + s.trust*0.25)      -- brightness tamed by trust
+  engine.detune(id, 0.002 + s.spread*0.0007)
+  engine.env_slope(id, 0.4 + s.memory_age*0.25)
+  engine.start(id)
+end
+
+-- ---------- SOFTCUT MEMORY (misremembering) ----------
+local function softcut_setup()
+  audio.level_adc_cut(1)
+  audio.level_eng_cut(1)
+  for i=1,2 do
+    softcut.enable(i,1)
+    softcut.buffer(i, i) -- use both buffers
+    softcut.level(i, 0.9)
+    softcut.level_input_cut(1, i, 1.0)
+    softcut.level_input_cut(2, i, 0.0)
+    softcut.rec(i, 1)
+    softcut.rec_level(i, 0.45) -- gentle imprint
+    softcut.pre_level(i, 0.85 - s.memory_age*0.5) -- higher age -> more smear
+    softcut.loop(i, 1)
+    softcut.loop_start(i, 0)
+    softcut.loop_end(i, 8 + i) -- different lengths to avoid loops aligning
+    softcut.rate(i, (i==1 and 1.0 or 0.997)) -- slow phasing
+    softcut.fade_time(i, 0.15 + s.memory_age*0.3)
+    softcut.position(i, 0)
+    softcut.play(i, 1)
+    softcut.pan(i, i==1 and -0.3 or 0.3)
+    softcut.filter_dry(i, 0.1)
+    softcut.post_filter_dry(i, 0.1)
+  end
+end
+
+local function soften_memory()
+  for i=1,2 do
+    softcut.pre_level(i, clamp(0.85 - s.memory_age*0.5, 0.2, 0.9))
+    softcut.fade_time(i, clamp(0.15 + s.memory_age*0.35, 0.05, 1.2))
+  end
+end
+
+-- ---------- ORGANISM ----------
+local function organism_breathe()
+  while true do
+    -- heartbeat pace varies slightly with risk/age
+    local beat = s.heart + (s.spread*0.01) + rnd(-0.03, 0.03)
+    clock.sleep(beat)
+
+    -- gentle pan drift, small amp fever
+    s.pan = clamp(s.pan + rnd(-0.08,0.08), -0.5, 0.5)
+    s.amp = clamp(s.amp + rnd(-0.02,0.02) + s.spread*0.002 - s.trust*0.003, 0.18, 0.42)
+
+    -- spontaneous apparition: more likely if ignored; never harsh
+    local idle = util.time() - s.last_offer_t
+    local p = clamp(0.08 + idle*0.006 + s.spread*0.02 - s.trust*0.03, 0.05, 0.55)
+    if math.random() < p then
+      local n = choose_note()
+      polysub_voice(1, n, rnd(0.5, 2.4), s.amp, s.pan)
+      -- optional upper harmony (carefully)
+      if math.random() < 0.35 + s.spread*0.04 then
+        polysub_voice(2, n + (math.random() < 0.5 and 7 or 12), rnd(0.4, 1.8), s.amp*0.7, -s.pan*0.8)
+      end
+    end
+
+    -- slow mood drift across sibling modes (kept pretty)
+    if math.random() < 0.1 + s.spread*0.01 - s.trust*0.02 then
+      local modes = {"ionian","lydian","mixolydian","dorian"} -- friendly palette
+      s.mode = modes[math.random(#modes)]
+      build_scale()
+    end
+
+    ui.breathe = 0.8*ui.breathe + 0.2*rnd(0.2,1.0)
+    ui.fever   = clamp(ui.fever + (s.spread*0.002) - (s.trust*0.003), 0, 1)
+    redraw()
+  end
+end
+
+-- ---------- INPUT & “OFFERS” ----------
+local function capture_offer()
+  -- mark the moment and let softcut imprint
+  s.last_offer_t = util.time()
+  -- set base key from input analysis proxy (simplified: sample the currently heard pitch?)
+  -- since we’re not doing pitch detection here (kept simple),
+  -- let E2 anchor base_midi later; the organism will still sound great without it.
+end
+
+local function invite_response()
+  local n = choose_note()
+  polysub_voice(3, n, rnd(0.6, 2.2), s.amp*0.85, -s.pan)
+  if math.random() < 0.4 then
+    polysub_voice(4, n-5, rnd(0.5, 1.6), s.amp*0.6, s.pan*0.6)
+  end
+end
+
+-- ---------- NORNS LIFECYCLE ----------
+function init()
+  params:add_separator("unevenly / alive")
+  params:add_control("base_note","seed center", controlspec.MIDINOTE)
+  params:set_action("base_note", function(v) s.base_midi = math.floor(v) end)
+  params:set("base_note", 60)
+
+  audio.level_cut(1.0)
+  audio.level_eng(1.0)
+  audio.rev_on()
+  audio.level_rev(clamp(0.2 + s.memory_age*0.2, 0.1, 0.5))
+  audio.level_tape(0.0)
+  audio.delay_on()
+  audio.level_delay_send(0.25 + s.spread*0.05)
+
+  engine.release(1, 0.9)
+  build_scale()
+  softcut_setup()
+
+  clock.run(organism_breathe)
+  s.started = true
+  redraw()
+end
+
+function enc(n,d)
+  if n==1 then -- Age / Dissolve
+    s.memory_age = clamp(s.memory_age + d*0.01, 0, 1)
+    soften_memory()
+  elseif n==2 then -- Trust / Anchor
+    s.trust = clamp(s.trust + d*0.01, 0, 1)
+  elseif n==3 then -- Risk
+    s.spread = clamp(s.spread + d*0.02, 1, 8)
+    build_scale()
+  end
+  redraw()
+end
+
+function key(n,z)
+  if n==1 and z==1 then
+    -- K1 hold handled as modifier in enc(1) spirit; we simulate "time drag"
+    if math.random() < s.obeys_time_drag then
+      s.heart = clamp(s.heart + rnd(-0.03,0.03), 0.07, 0.25)
+    else
+      -- rebellion: quick fever spike that still sounds nice
+      s.spread = clamp(s.spread + rnd(0.1,0.5), 1, 8)
+    end
+  elseif n==2 and z==1 then
+    capture_offer()
+  elseif n==3 and z==1 then
+    invite_response()
+  end
+  redraw()
+end
+
+-- ---------- TINY, CRYPTIC UI ----------
+local gfx = require "screen"
+function redraw()
+  screen.clear()
+  screen.aa(1)
+  screen.level(2)
+
+  -- organism glyph: a breathing, off-center oval that fuzzes with fever
+  local cx = 64 + math.sin(util.time()*0.37)*6
+  local cy = 32 + math.cos(util.time()*0.21)*4
+  local r  = 10 + s.trust*6 + ui.breathe*4
+  for i=1,6 do
+    local jitter = (ui.fever*2) + rnd(-0.6,0.6)
+    screen.circle(cx + rnd(-1,1), cy + rnd(-1,1), r + jitter + i*0.6)
+    screen.stroke()
+  end
+
+  -- tiny runes (not labels)
+  screen.level(1)
+  screen.move(5,60);  screen.text("age")
+  screen.move(40,60); screen.text("trust")
+  screen.move(85,60); screen.text("risk")
+
+  -- subtle meters
+  screen.level(3)
+  screen.move(5,64);  screen.line_rel(s.memory_age*30,0); screen.stroke()
+  screen.move(40,64); screen.line_rel(s.trust*30,0);      screen.stroke()
+  screen.move(85,64); screen.line_rel((s.spread/8)*40,0); screen.stroke()
+
+  screen.update()
+end
+
+function cleanup()
+  -- let it die quietly
+end
