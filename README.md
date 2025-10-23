@@ -44,6 +44,43 @@ If you have a **monome Crow** connected to **Whimsical Raps Just Friends** via i
 
 This is **completely optional** — the script works perfectly with just PolySub, but JF adds a beautiful analog texture layer.
 
+### Monome Grid (optional)
+
+If you have a **monome Grid** connected, it provides deep visual and tactile control over the organism's harmonic structure and behavior. The interface adapts to your grid size:
+
+#### 128 Grid (8x16 or similar) Layout:
+
+* **Row 1** — Custom scale degrees (toggle 12 semitones in/out)
+* **Row 2** — Toggle custom scale mode (col 14)
+* **Row 3** — Mode selection (ionian, dorian, phrygian, lydian, mixolydian, aeolian, locrian)
+* **Row 4** — Manual note triggering (2-octave chromatic range)
+* **Row 6** — Age/Dissolve slider (visual feedback)
+* **Row 7** — Trust/Anchor slider
+* **Row 8** — Risk slider (glows with fever)
+
+#### 256 Grid (16x16) Layout:
+
+* **Rows 1-2** — Custom scale degrees (larger, double-height buttons)
+* **Row 3** — Toggle custom scale (col 14), Clear custom scale (col 16)
+* **Row 4** — Mode selection (7 modes, spaced wider)
+* **Rows 6-9** — Manual note triggering (4-octave chromatic range!)
+* **Row 11** — Age/Dissolve slider
+* **Row 12** — Trust/Anchor slider
+* **Row 13** — Risk slider with fever visualization
+* **Row 15** — Organism interaction zone
+  - **Left half (1-8)**: Provoke (trigger response + increase volatility)
+  - **Right half (9-16)**: Calm (increase trust + reduce risk)
+
+#### Grid Features:
+
+* **Custom Scale Building**: Toggle individual semitones to create your own scale pool (overrides mode-based scales when enabled)
+* **Manual Performance**: Trigger specific notes while the organism continues its autonomous behavior
+* **Visual Feedback**: All parameters show live state with LED brightness
+* **Tactile Control**: Sliders provide immediate, hands-on parameter adjustment
+* **Organism Interaction** (256 only): Physical zones to provoke or calm the creature
+
+The Grid is **completely optional** — the script works perfectly without it, but adds a powerful layer of control while maintaining the anti-instrumental philosophy (you're still influencing, not commanding).
+
 > Plug an instrument/mic into input 1. Keep levels tasteful; this wants headroom.
 
 ---
