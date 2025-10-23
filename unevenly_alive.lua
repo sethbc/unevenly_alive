@@ -76,9 +76,22 @@ local function build_scale()
   s.scale = pool
 end
 
+-- ensure scale is always valid (never empty)
+local function apply_custom_or_default_scale()
+  if s.use_custom_scale and #s.custom_scale_degrees > 0 then
+    s.scale = s.custom_scale_degrees
+  else
+    build_scale()
+  end
+end
+
 local function choose_note()
   -- center vs risk: biased roulette
   local bias = clamp(1.2 - s.trust, 0.1, 1.0)
+  -- safety: ensure we always have notes to choose from
+  if #s.scale == 0 then
+    apply_custom_or_default_scale()
+  end
   local deg = s.scale[math.random(#s.scale)]
   local octave = math.floor(rnd(-1, 2))
   local n = s.base_midi + deg + (12 * octave)
@@ -176,7 +189,7 @@ end
 
 function grid_redraw_128()
   -- Row 1-2: Scale degree selector (12 semitones)
-  for i=1,12 do
+  for i=1,math.min(12, grid_size.x) do
     local has_degree = false
     if s.use_custom_scale then
       for _,deg in ipairs(s.custom_scale_degrees) do
@@ -188,7 +201,9 @@ function grid_redraw_128()
   end
 
   -- Row 2: Toggle custom scale mode
-  grid_device:led(14, 2, s.use_custom_scale and 15 or 4)
+  if grid_size.x >= 14 then
+    grid_device:led(14, 2, s.use_custom_scale and 15 or 4)
+  end
 
   -- Row 3: Mode selection (7 modes)
   for i=1,math.min(7, grid_size.x) do
@@ -407,18 +422,12 @@ function grid_key_128(x, y, z)
         table.insert(s.custom_scale_degrees, degree)
         table.sort(s.custom_scale_degrees)
       end
-      if s.use_custom_scale then
-        s.scale = s.custom_scale_degrees
-      end
+      if s.use_custom_scale then apply_custom_or_default_scale() end
     end
   -- Row 2: Toggle custom scale mode
   elseif y == 2 and x == 14 and z == 1 then
     s.use_custom_scale = not s.use_custom_scale
-    if s.use_custom_scale and #s.custom_scale_degrees > 0 then
-      s.scale = s.custom_scale_degrees
-    else
-      build_scale()
-    end
+    apply_custom_or_default_scale()
   -- Row 3: Mode selection
   elseif y == 3 and x <= 7 and z == 1 then
     s.mode = grid_modes[x]
@@ -469,20 +478,16 @@ function grid_key_256(x, y, z)
         table.insert(s.custom_scale_degrees, degree)
         table.sort(s.custom_scale_degrees)
       end
-      if s.use_custom_scale then
-        s.scale = s.custom_scale_degrees
-      end
+      if s.use_custom_scale then apply_custom_or_default_scale() end
     end
   -- Row 3: Controls
   elseif y == 3 and x == 14 and z == 1 then
     s.use_custom_scale = not s.use_custom_scale
-    if s.use_custom_scale and #s.custom_scale_degrees > 0 then
-      s.scale = s.custom_scale_degrees
-    else
-      build_scale()
-    end
+    apply_custom_or_default_scale()
   elseif y == 3 and x == 16 and z == 1 then
     s.custom_scale_degrees = {}
+    -- Re-apply scale choice to avoid empty scale
+    apply_custom_or_default_scale()
   -- Row 4: Mode selection
   elseif y == 4 and z == 1 then
     local mode_idx = math.ceil(x / 2)
