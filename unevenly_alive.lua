@@ -81,8 +81,8 @@ end
 
 -- ---------- SOFTCUT MEMORY (misremembering) ----------
 local function softcut_setup()
-  audio.level_adc_cut(1)
-  audio.level_eng_cut(1)
+  audio.level_adc_cut(1.0)
+  audio.level_eng_cut(1.0)
   for i=1,2 do
     softcut.enable(i,1)
     softcut.buffer(i, i) -- use both buffers
@@ -175,10 +175,10 @@ function init()
   audio.level_cut(1.0)
   audio.level_eng(1.0)
   audio.rev_on()
-  audio.level_rev(clamp(0.2 + s.memory_age*0.2, 0.1, 0.5))
+  audio.level_eng_rev(clamp(0.2 + s.memory_age*0.2, 0.1, 0.5))
   audio.level_tape(0.0)
-  audio.delay_on()
-  audio.level_delay_send(0.25 + s.spread*0.05)
+  -- Note: norns doesn't have built-in audio.delay_on/level_delay_send
+  -- Delay effect is handled by softcut buffers instead
 
   engine.release(1, 0.9)
   build_scale()
