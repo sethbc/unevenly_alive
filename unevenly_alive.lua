@@ -8,6 +8,9 @@ local musicutil = require "musicutil"
 local softcut = softcut
 local arc_device = arc.connect()
 local crow_connected = false
+local grid_device = grid.connect()
+local grid_connected = false
+local grid_size = {x = 0, y = 0}
 
 -- ---------- STATE ----------
 local s = {
@@ -26,10 +29,17 @@ local s = {
   pan = 0,
   rev = 0.28,
   del = 0.22,
+  custom_scale_degrees = {}, -- user-selected scale degrees from grid
+  use_custom_scale = false,  -- toggle between generated and custom scale
 }
 
 local ui = { blink = 0, breathe = 0, fever = 0, k1_held = false }
 local arc_connected = false
+
+-- Grid state
+local grid_modes = {"ionian", "dorian", "phrygian", "lydian", "mixolydian", "aeolian", "locrian"}
+local grid_note_held = {} -- track held notes for manual triggering
+local grid_provoke_held = false -- organism provocation zone
 
 -- ---------- UTIL ----------
 local function lerp(a,b,t) return a + (b-a) * t end
