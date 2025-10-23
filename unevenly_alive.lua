@@ -35,7 +35,25 @@ local function rnd(a,b) return a + (b-a) * math.random() end
 local function sign(x) return x < 0 and -1 or 1 end
 
 local function build_scale()
-  local degrees = musicutil.SCALES[musicutil.SCALE_NAMES_MAP[s.mode]].intervals
+  -- Find scale by name (case-insensitive search)
+  local scale_data = nil
+  for i=1,#musicutil.SCALES do
+    if string.lower(musicutil.SCALES[i].name) == string.lower(s.mode) then
+      scale_data = musicutil.SCALES[i]
+      break
+    end
+    -- Check alternative names too
+    if musicutil.SCALES[i].alt_names then
+      for j=1,#musicutil.SCALES[i].alt_names do
+        if string.lower(musicutil.SCALES[i].alt_names[j]) == string.lower(s.mode) then
+          scale_data = musicutil.SCALES[i]
+          break
+        end
+      end
+    end
+  end
+
+  local degrees = scale_data and scale_data.intervals or {0, 2, 4, 5, 7, 9, 11} -- fallback to major
   local pool = {}
   for i=1,#degrees do table.insert(pool, degrees[i]) end
   -- add beautiful color tones depending on risk
