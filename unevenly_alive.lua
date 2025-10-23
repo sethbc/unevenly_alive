@@ -64,19 +64,19 @@ local function choose_note()
 end
 
 local function polysub_voice(id, midi, dur, amp, pan)
-  -- map to PolySub
+  -- PolySub uses global parameters, not per-voice control
   local hz = musicutil.note_num_to_freq(midi)
-  engine.hz(id, hz)
-  engine.amp(id, amp)
-  engine.pan(id, pan)
-  engine.lp(id, 2200 + (s.spread*300))
-  engine.hp(id, 10)
-  engine.release(id, clamp(dur*1.15, 0.2, 6))
-  engine.fm_index(id, 0.05 + s.spread*0.03) -- a whisper of tension
-  engine.cut(id, 0.55 + s.trust*0.25)      -- brightness tamed by trust
-  engine.detune(id, 0.002 + s.spread*0.0007)
-  engine.env_slope(id, 0.4 + s.memory_age*0.25)
-  engine.start(id)
+
+  -- Set global parameters (affect all voices)
+  engine.level(amp)
+  engine.cut(2200 + (s.spread*300))
+  engine.ampRel(clamp(dur*1.15, 0.2, 6))
+  engine.detune(0.002 + s.spread*0.0007)
+  engine.timbre(0.5 + s.trust*0.25) -- brightness via timbre
+  engine.shape(0.05 + s.spread*0.03) -- base waveshape for tension
+
+  -- Start voice with frequency
+  engine.start(id, hz)
 end
 
 -- ---------- SOFTCUT MEMORY (misremembering) ----------
@@ -180,7 +180,13 @@ function init()
   -- Note: norns doesn't have built-in audio.delay_on/level_delay_send
   -- Delay effect is handled by softcut buffers instead
 
-  engine.release(1, 0.9)
+  -- Initialize PolySub global parameters
+  engine.ampRel(0.9)
+  engine.level(0.3)
+  engine.cut(2200)
+  engine.shape(0.2)
+  engine.timbre(0.5)
+
   build_scale()
   softcut_setup()
 
