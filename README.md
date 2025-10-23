@@ -31,6 +31,19 @@ If you have a **monome Arc** connected, it provides visual feedback and tactile 
 
 The Arc is **completely optional** — the script works perfectly without it, but adds a beautiful tactile/visual layer if present.
 
+### Monome Crow + Just Friends (optional)
+
+If you have a **monome Crow** connected to **Whimsical Raps Just Friends** via i2c, the script will automatically route voices to Just Friends in synthesis mode:
+
+* Voices are sent polyphonically using JF's automatic voice allocation
+* Pitch follows the same harmonic logic (V/oct conversion)
+* Amplitude maps to JF's level control (0-5V range)
+* Just Friends becomes an **external voice** for the time-animal
+
+**Setup:** Connect Crow to norns via USB, connect Crow to Just Friends via i2c. The script will detect Crow and enable Just Friends automatically.
+
+This is **completely optional** — the script works perfectly with just PolySub, but JF adds a beautiful analog texture layer.
+
 > Plug an instrument/mic into input 1. Keep levels tasteful; this wants headroom.
 
 ---
