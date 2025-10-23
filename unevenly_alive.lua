@@ -7,6 +7,7 @@ engine.name = "PolySub" -- lush & stable enough to stay beautiful
 local musicutil = require "musicutil"
 local softcut = softcut
 local arc_device = arc.connect()
+local crow_connected = false
 
 -- ---------- STATE ----------
 local s = {
@@ -97,6 +98,16 @@ local function polysub_voice(id, midi, dur, amp, pan)
 
   -- Start voice with frequency
   engine.start(id, hz)
+
+  -- Also trigger Just Friends via Crow if connected
+  if crow_connected then
+    -- Convert MIDI to V/oct (MIDI 60 = C4 = 1V, so 0V = MIDI 48/C3)
+    local voct = (midi - 60) / 12.0
+    -- Map amplitude to JF level (0-5V range)
+    local jf_level = amp * 5.0
+    -- Use play_note for polyphonic voice allocation
+    crow.ii.jf.play_note(voct, jf_level)
+  end
 end
 
 -- ---------- SOFTCUT MEMORY (misremembering) ----------
@@ -267,6 +278,28 @@ function init()
     print("Arc connected")
   else
     print("Arc not found (optional)")
+  end
+
+  -- Crow + Just Friends setup (optional)
+  crow.init = function()
+    crow_connected = true
+    -- Set Just Friends to synthesis mode
+    crow.ii.jf.mode(1)
+    -- Activate run mode
+    crow.ii.jf.run_mode(1)
+    print("Crow connected - Just Friends enabled via ii")
+  end
+
+  crow.add = function()
+    crow_connected = true
+    crow.ii.jf.mode(1)
+    crow.ii.jf.run_mode(1)
+    print("Crow connected - Just Friends enabled via ii")
+  end
+
+  crow.remove = function()
+    crow_connected = false
+    print("Crow disconnected")
   end
 
   clock.run(organism_breathe)
